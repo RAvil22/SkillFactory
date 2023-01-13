@@ -1,0 +1,35 @@
+# depslib dependency file v1.0
+1671539360 source:c:\users\r.abdullin\documents\codeblocks\temp++\main.cpp
+	"user.h"
+	"chatExcept.h"
+
+1671540179 c:\users\r.abdullin\documents\codeblocks\temp++\user.h
+	"chat.h"
+	<fstream>
+
+1671528924 c:\users\r.abdullin\documents\codeblocks\temp++\chat.h
+	<list>
+	"message.h"
+	"chatExcept.h"
+
+1671453148 c:\users\r.abdullin\documents\codeblocks\temp++\message.h
+	<iostream>
+	<memory>
+	<chrono>
+	<fstream>
+
+1671193771 source:c:\users\r.abdullin\documents\codeblocks\temp++\message.cpp
+	"message.h"
+
+1671519497 source:c:\users\r.abdullin\documents\codeblocks\temp++\chat.cpp
+	"chat.h"
+
+1671194289 c:\users\r.abdullin\documents\codeblocks\temp++\chatexcept.h
+	<exception>
+
+1671194291 source:c:\users\r.abdullin\documents\codeblocks\temp++\chatexcept.cpp
+	"chatExcept.h"
+
+1671540065 source:c:\users\r.abdullin\documents\codeblocks\temp++\user.cpp
+	"user.h"
+
