@@ -154,7 +154,7 @@ void User::fillProfileChatsFromFile(){
                 chatFile.close();
             }//if(chatFile.is_open())
             else{throw NoOpen(fileName_);}//??????? ??????????
-
+            //userChatsFile.seekg(sizeof(time_t), ios::cur) //ѕропустить данные о последнем открытии чата
         }//while(userChatsFile.read((char*)&chatID,sizeof(chatID)))
         userChatsFile.close();
     }//if(userChatsFile.is_open())
@@ -372,37 +372,7 @@ void User::setPassword(string password){
     else return;
 }
 
-void User::showUserChatIDs(void) {
-    for (auto const& i : this->userChats_) {
-        cout << i->getChatID() << " ";
-    }
-    cout << endl;
-}
 
-int User::getChatID(const unsigned int num) {
-    if (num < this->userChats_.size()) {
-        auto iter = this->userChats_.begin();
-        for (unsigned int i{ 0 }; i < num; ++i) ++iter;
-        return (*iter)->getChatID();
-    }
-    else return -1;
-}
-
-unsigned int User::getChatType(const unsigned int num){
-    if(num < this->userChats_.size()){
-        auto iter = this->userChats_.begin();
-        for (unsigned int i{ 0 }; i < num; ++i) ++iter;
-        return (*iter)->getChatType();
-    }
-}
-
-string User::getChatName(const unsigned int num){
-    if(num < this->userChats_.size()){
-        auto iter = this->userChats_.begin();
-        for (unsigned int i{ 0 }; i < num; ++i) ++iter;
-        return (*iter)->getChatName();
-    }
-}
 /*????????/???????? ?????*/////////////////////////////////////////////////////////////
 
 unsigned int User::getFreeChat(void) {
@@ -426,22 +396,7 @@ unsigned int User::getFreeChat(void) {
     }
 }
 
-bool User::createPublicChat(void){
-    //???????? ??????? ? ?????? ????
-    unsigned int freeChatNum{ this->getFreeChat() };
-    shared_ptr<PublicChat> temp = make_shared<PublicChat>(freeChatNum, this->getUserID());
 
-    //?????????? ?????? ? ???? ????? ????????????
-    ofstream userChats;
-    string fileName{ "user_chats_" + std::to_string(this->userID_) + ".txt" };
-    userChats.open(fileName, ios::app);
-    userChats.write((char*)&freeChatNum, sizeof(freeChatNum));
-    userChats.close();
-
-    //?????????? ??????? ???? ? ??????
-    this->userChats_.push_back(std::move(temp));
-    return true;
-}
 
 void User::setChatName(unsigned int num, string name){
     auto iter = this->userChats_.begin();
@@ -450,113 +405,6 @@ void User::setChatName(unsigned int num, string name){
     (*iter)->setChatName(name);
 }
 
-bool User::removeOwnedPublicChat(const unsigned int chatID){
-    // ????? ??? ? ?????? ???????????????? ?????
-    // ????????? ???????????? ?? ???????? ?????
-    // ???? ???????????? ??????? ?????, ???????
-    auto iter = searchUserChat(chatID);
-    if(iter != this->userChats_.end()){
-       //auto temp = dynamic_cast<PublicChat>(iter);
-       shared_ptr<PublicChat> temp = dynamic_pointer_cast<PublicChat>((*iter));
-       if(temp->getPublicChatOwner() == this->userID_){
-            string fileName{ "PubCh_" + to_string(temp->getChatID()) + ".txt" };
-            ifstream check(fileName);
-            if (check.is_open()) {
-                check.close();
-                remove(fileName.c_str());
-                this->userChats_.erase(iter);
-                return true;
-            }
-            else{throw NoOpen(fileName);}
-       }
-    }
-    return false;
-}
-
-bool User::removeNonOwnedPublicChat(const unsigned int chatID){
-    auto iter = searchUserChat(chatID);
-    if(iter != this->userChats_.end()){
-        this->userChats_.erase(iter);
-        return true;
-    }
-    else{return false;}
-}
-
-bool User::createPrivateChat(unsigned int calledUserID){
-    unsigned int freeChatNum{ this->getFreeChat() };
-    string firstUserChatsFileName{"user_chats_" + to_string(this->userID_) + ".txt"};
-    string secondUserChatsFileName{"user_chats_" + to_string(calledUserID) + ".txt"};
-
-    ofstream firstUserChatsFile{firstUserChatsFileName, ios::app};
-    firstUserChatsFile.write((char*)&freeChatNum, sizeof(freeChatNum));
-    firstUserChatsFile.close();
-
-    ofstream secondUserChatsFile{secondUserChatsFileName, ios::app};
-    secondUserChatsFile.write((char*)&freeChatNum, sizeof(freeChatNum));
-    secondUserChatsFile.close();
-
-    shared_ptr<PrivateChat> temp = make_shared<PrivateChat>(freeChatNum, this->userID_, calledUserID);
-    this->userChats_.push_back(std::move(temp));
-    return true;
-}
-
-/*????? ????*/////////////////////////////////////////////////////////////
-list<shared_ptr<Chat>>::iterator User::searchUserChat(const unsigned int chatID){
-    auto iter = this->userChats_.begin();
-    while(iter != this->userChats_.end()){
-        if((*iter)->getChatID() == chatID) {
-            return iter;
-        }
-        ++iter;
-    }
-    return iter;
-}
-
-unsigned int User::searchChatID(const unsigned int chatID){ //??????? ID ????
-    auto iter{ searchUserChat(chatID) };
-    if (iter != this->userChats_.end()) return  (*iter)->getChatID();
-    else {
-        string fileName{ "PubCh_" + to_string(chatID) + ".txt" };
-        ifstream file(fileName);
-        if (file.is_open()) { file.close(); return chatID; }
-        else return 0;
-    }
-    return 0;
-}
-
-list<unsigned int> User::searchChatName(const string chatName){ //??????? ID ????? ?????????? ?????
-    list<unsigned int> result;
-    //????? ?????  ?????????? ????
-    unsigned int lastChatID{ 1000 };
-    char c;
-    unsigned int size;
-    auto cnSize{chatName.size()};
-    string text;
-    unsigned int id;
-    for (unsigned int i{ 1 }; i < lastChatID; ++i) {
-        string fileName{ "PubCh_" + to_string(i) + ".txt" };
-        ifstream file(fileName);
-        if (file.is_open()) {
-            file.seekg(sizeof(unsigned int) + sizeof(time_t) + sizeof(unsigned int) + sizeof(time_t));
-            file.read((char*)&size, sizeof(size));
-            for (unsigned int j{ 0 }; j < size; ++j) {
-                file.read((char*)&c, sizeof(char));
-                text += c;
-            }
-            for (unsigned int i{ 0 }; i < cnSize; ++i) {
-                if (text[i] != chatName[i])break;
-                if (i == cnSize - 1) {
-                    file.seekg(ios::beg);
-                    file.read((char*)&id, sizeof(id));
-                    result.push_back(id);
-                }
-            }
-            file.close();
-        }
-        else{throw NoOpen(fileName);}
-    }
-    return result;
-}
 
 bool User::joinToChat(unsigned int chatID) {
     auto iter = this->userChats_.begin();
@@ -608,128 +456,4 @@ bool User::leaveChat(unsigned int chatID) {
     return false;
 }
 
-bool User::sendMessageToChat(shared_ptr<Message> message, unsigned int chatID){
-    auto iter = searchUserChat(chatID);
-    if(iter != this->userChats_.end()){
-        return (* iter)->addMessage(std::move(message));
-    }
-    else return false;
-}
 
-bool User::showLastChatMessages(unsigned int chatID, const unsigned int showNum){
-    auto iter = searchUserChat(chatID);
-    if(iter != this->userChats_.end() && showNum < INT_MAX){
-        if((*iter)->size() >= showNum){
-            for(int i{static_cast<int> (showNum) - 1}; i >= 0; --i){
-                cout << (*iter)->getMessageText(i) << endl;
-            }
-        }
-        else{
-            for(int i{static_cast<int>((*iter)->size())-1}; i >= 0; --i){
-                cout << (*iter)->getMessageText(i) << endl;
-            }
-        }
-        return true;
-    }
-    else return false;
-}
-
-bool User::updateChat(list<shared_ptr<Chat>>::iterator chat){
-    if (*chat) {
-        //???? ??? ??????????, ??????? ?? ?????????? ????????? ? ???? ???????????, ????? ? ?????.
-        unsigned int userSender;
-        time_t userTime;
-        string userText;
-
-        auto lastMes = (*chat)->getLastMessage();
-        if(lastMes){
-            userSender = lastMes->getMessageSender();
-            userTime = lastMes->getMessageSendTime();
-            userText = lastMes->getText();
-        }
-        else{
-            userSender = 0;
-            userTime = 0;
-            userText = "";
-        }
-
-        //??????? ???? ????
-        string chatFileName{"Chat_" + to_string((*chat)->getChatID()) + ".txt"};
-        ifstream chatFile{chatFileName};
-
-        if (chatFile.is_open()) {
-            unsigned int chatType;
-            chatFile.read((char*)&chatType,sizeof(chatType));
-            switch (chatType) {
-                case 1:
-                    chatFile.seekg(144, ios::beg);
-                    break;
-                case 2:
-                    chatFile.seekg(20, ios::beg);
-                    break;
-                default:
-                    chatFile.close();
-                    throw NoChatType(chatType);
-                    break;
-            }
-            unsigned int currentSender;
-            time_t currentTime;
-            unsigned int size_;
-            string currentText;
-            char c;
-            //????? ? ????? ??? ?????????
-            while(chatFile.read((char*)&currentSender, sizeof(currentSender)) && chatFile.read((char*)&currentTime, sizeof(currentTime))
-                   && chatFile.read((char*)&size_, sizeof(size_))) {
-                currentText = "";
-                for (unsigned int i{ 0 }; i < size_; ++i) {
-                    chatFile.read((char*)&c, sizeof(c));
-                    currentText += c;
-                }
-                //?? ?????????? ?? ????????? ????????? ? ?????, ??????? ?????? ????????? ? ???????? ? ???, ????????? ??????? ? ????? UnreadMessages ????
-                if (currentTime > userTime){
-                    shared_ptr<Message> temp = make_shared<Message>(currentText, currentSender, currentTime);
-                    (*chat)->addMessage(temp); //?????? ?????, ????? ??????? ?? ????????-???????? ?????. ????????!
-                }
-            }
-            chatFile.close();
-            return true;
-        }
-        else {throw NoOpen(chatFileName);}
-    }
-    else return false;
-}
-
-list<shared_ptr<Message>> User::getAllChatMessages(unsigned int chatID){
-    auto chat = searchUserChat(chatID);
-    return (*chat)->getAllMessages();
-}
-
-bool User::uploadChatMessages(unsigned int chatID, list<shared_ptr<Message>>& chatMessages){
-    //????? ?????? ???
-    auto chat = searchUserChat(chatID);
-    auto result = updateChat(chat);
-    auto chatSize{(*chat)->size()};
-    chatMessages = getAllChatMessages(chatID);
-    return result;
-}
-
-bool User::updateChats(){
-    auto chat = this->userChats_.begin();
-    while(chat != userChats_.end())updateChat(chat);
-    return true;
-}
-
-void User::userSettings(unsigned int upload, string name, bool vis){ //?????????? ???????????? ?????????, ??? ????????????, ?????????
-    this->showXUploadmessages = upload;
-    this->userName_ = name;
-    this->visability_ = vis;
-}
-
-bool User::removeMessageFromChat(unsigned int messageNum, unsigned int chatID){
-    auto iter{ searchUserChat(chatID) };
-    if(iter != this->userChats_.end()){
-        (*iter)->removeMessage(messageNum, this->userID_);
-        return true;
-    }
-    else return false;
-}

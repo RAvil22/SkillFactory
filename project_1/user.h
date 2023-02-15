@@ -33,7 +33,7 @@ public:
 
 
     /*Поиск чата*/
-    int getChatID(const unsigned int);
+    unsigned int getChatID(const unsigned int);
     string getChatName(const unsigned int);
     unsigned int getChatType(const unsigned int);
     list<shared_ptr<Chat>>::iterator searchUserChat(const unsigned int); //ok

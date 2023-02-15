@@ -19,7 +19,11 @@ SOURCES += \
     qmessagewidget.cpp \
     registration.cpp \
     singledialog.cpp \
-    user.cpp
+    user.cpp \
+    user_chats_create-remove.cpp \
+    user_chats_display.cpp \
+    user_chats_search.cpp \
+    user_messages.cpp
 
 HEADERS += \
     autorization.h \
