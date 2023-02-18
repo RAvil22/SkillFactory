@@ -92,6 +92,7 @@ void Messenger::sendMessage(){
     QMessageWidget *temp = new QMessageWidget(ui->scrollArea_Chat->widget(), this->current->getUserID(),
                                               QString::fromStdString(current->getUserName()), std::time(nullptr), ui->textEdit->toPlainText());
     ui->chatLayout->addWidget(temp);
+    ui->textEdit->clear();
 }
 
 void Messenger::createMainActions(void){
@@ -314,11 +315,8 @@ bool Messenger::loadUserChat(unsigned int chatID){
         QWidget* widget = item->widget();
         if(widget) delete widget;
     }
-    //Загрузить из файлов сообщения чата(делать через класс User)
-    //Обновить чат в объекте пользователя из файла
-    //Выгрузить из чата объекта пользователя все сообщения
+
     list<shared_ptr<Message>> chatMessages;
-    /*Проблема в методе User::uploadChatMessages, после передачи владения unique_ptr в список, не удается передать владение новым элементом unique_ptr*/
     if(current->uploadChatMessages(chatID, chatMessages)){
         auto iter{chatMessages.begin()};
         auto endChat{chatMessages.end()};
@@ -354,7 +352,11 @@ bool Messenger::loadUserChat(unsigned int chatID){
 }
 
 bool Messenger::updateUserChatsStatus(void){
-    std::cout << "load user chats" << std::endl;
+    //Пройти по всем чатам пользователя, вызвать для каждого uploadChatMessages,
+    //вызвать getUnreadMessages, полученные значения занести в кнопки
+    //Возможно, на основе кнопок создать собственный виджет с кнопкой вызова чата,
+    //надписью с номером чата и скрытым для пользователя ID чата
+
 }
 
 

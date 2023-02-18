@@ -12,6 +12,7 @@ public:
     const unsigned int getChatID(void) const;
     void setChatName(string chatName);
     const string getChatName(void);
+    time_t getChatLastUpdate(void){return this->lastUpdate_;}
     virtual bool addMessage(shared_ptr<Message>) = 0;
     string getMessageText(unsigned int);
     unsigned int getMessageSender(unsigned int);

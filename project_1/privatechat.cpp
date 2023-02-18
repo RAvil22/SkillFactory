@@ -61,7 +61,7 @@ secondUserID_{ secondUserID } {
 bool PrivateChat::addMessage(shared_ptr<Message> mes) {
     //Обновление объекта чата
     this->lastUpdate_ = mes->getMessageSendTime();
-    this->messages_.push_back(move(mes));
+    this->messages_.push_back(mes);
     //Создание указателя на последний элемент списка
     auto iter = messages_.end();
     --iter;

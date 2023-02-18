@@ -69,7 +69,7 @@
       </font>
      </property>
      <property name="echoMode">
-      <enum>QLineEdit::Password</enum>
+      <enum>QLineEdit::Normal</enum>
      </property>
     </widget>
    </item>

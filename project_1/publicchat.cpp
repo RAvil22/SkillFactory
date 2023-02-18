@@ -274,8 +274,9 @@ void PublicChat::updateChatFromFiles(shared_ptr<Message> mess) {
         //ѕолучение информации о файле и его последнем изменении
         readFile.read((char*)&chatFileOwnerID, sizeof(chatFileOwnerID));
         readFile.read((char*)&lastFileUpdate, sizeof(lastFileUpdate));
-        time_t messTime = mess->getMessageSendTime();
-
+        time_t messTime;
+        if(mess){messTime = mess->getMessageSendTime();}
+        else{messTime = 0;}
         //≈сли промежуток между последним сообщением чата и временем указанном в mess(беретс€ последнее сообщение чата у пользовател€)
         //больше часа, обновить объект чата полностью
         if (lastFileUpdate - messTime > 3600) {

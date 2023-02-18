@@ -40,7 +40,7 @@ unsigned int User::searchChatID(const unsigned int chatID){ //??????? ID ????
     auto iter{ searchUserChat(chatID) };
     if (iter != this->userChats_.end()) return  (*iter)->getChatID();
     else {
-        string fileName{ "PubCh_" + to_string(chatID) + ".txt" };
+        string fileName{ "Chat_" + to_string(chatID) + ".txt" };
         ifstream file(fileName);
         if (file.is_open()) { file.close(); return chatID; }
         else return 0;
@@ -61,7 +61,7 @@ list<unsigned int> User::searchChatName(const string chatName){ //??????? ID ???
     string text;
     unsigned int id;
     for (unsigned int i{ 1 }; i < lastChatID; ++i) {
-        string fileName{ "PubCh_" + to_string(i) + ".txt" };
+        string fileName{ "Chat_" + to_string(i) + ".txt" };
         ifstream file(fileName);
         if (file.is_open()) {
             file.seekg(sizeof(unsigned int) + sizeof(time_t) + sizeof(unsigned int) + sizeof(time_t));

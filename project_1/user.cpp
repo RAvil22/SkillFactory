@@ -97,13 +97,17 @@ void User::fillProfileChatsFromFile(){
     ifstream userChatsFile(userChatsFileName);
     if(userChatsFile.is_open()){
         unsigned int chatID;
+        time_t lastUserChatUpdate;
 
         while(userChatsFile.read((char*)&chatID,sizeof(chatID))){
+            //Либо читать, либо пропускать, одно из двух
+            //userChatsFile.read((char*)&lastUserChatUpdate, sizeof(lastUserChatUpdate));
+            userChatsFile.seekg(sizeof(time_t),ios::cur);
             //??????? ???? ???? ? ?????? ("Chat_" + to_string(chatID_) + ".txt")
             string fileName_ = "Chat_" + to_string(chatID) + ".txt";
             ifstream chatFile(fileName_);
             if(chatFile.is_open()){
-                    unsigned int chatType{0};
+                unsigned int chatType{0};
                 if(chatFile.is_open()){
                     chatFile.read((char*)&chatType, sizeof(chatType));
                     chatFile.close();
@@ -154,7 +158,6 @@ void User::fillProfileChatsFromFile(){
                 chatFile.close();
             }//if(chatFile.is_open())
             else{throw NoOpen(fileName_);}//??????? ??????????
-            //userChatsFile.seekg(sizeof(time_t), ios::cur) //Пропустить данные о последнем открытии чата
         }//while(userChatsFile.read((char*)&chatID,sizeof(chatID)))
         userChatsFile.close();
     }//if(userChatsFile.is_open())
@@ -214,7 +217,9 @@ void User::createProfileFiles(){
         auto chatsIter = this->userChats_.begin();
         while (chatsIter != this->userChats_.end()) {
             unsigned int chatID = (*chatsIter)->getChatID();
+            time_t chatLastUpdate = (*chatsIter)->getChatLastUpdate();
             userChatsFile.write((char*)&chatID, sizeof(chatID));
+            userChatsFile.write((char*)&chatLastUpdate, sizeof(chatLastUpdate));
             ++chatsIter;
         }
         userChatsFile.close();
@@ -411,30 +416,37 @@ bool User::joinToChat(unsigned int chatID) {
     auto end_ = this->userChats_.end();
     while (iter != end_) {
         if ((*iter)->getChatID() == chatID) {
-            return true;
+            return false;
         }
     }
 
     //???????? ID ????????? ????
-    string chatFileName{ "PubCh_" + to_string(chatID) + ".txt" };
-    string chatUsersFileName{ "PubCh_" + to_string(chatID) + "_users.txt" };
+    string chatFileName{ "Chat_" + to_string(chatID) + ".txt" };
+    string chatUsersFileName{ "Chat_" + to_string(chatID) + "_users.txt" };
+    unsigned int chatType{0};
     unsigned int chatOwner{0};
     ifstream chatFile(chatFileName);
     ofstream chatUsersFile(chatUsersFileName, ios::app);
 
     if (chatFile.is_open() && chatUsersFile.is_open()){
+        //Получение типа чата, получение ID владельца
+        chatFile.read((char*)&chatType, sizeof(chatType));
         chatFile.read((char*)&chatOwner, sizeof(chatOwner));
         chatFile.close();
+        //Запись в список пользователей чата текущего пользователя
         chatUsersFile.write((char*)&this->userID_, sizeof(this->userID_));
         chatUsersFile.close();
-        shared_ptr<PublicChat> temp = make_unique<PublicChat>(chatID, chatOwner);
+        //Создание объекта публичного чата
+        shared_ptr<PublicChat> temp = make_shared<PublicChat>(chatID, chatOwner);
+        //Получение времени последнего обновления чата
+        time_t lastUpdate = temp->getChatLastUpdate();
+        //Передача созданного чата в список чатов пользователя
         this->userChats_.push_back(std::move(temp));
-        iter = this->userChats_.end();
-        --iter;
-        shared_ptr<Message> last = temp->getLastMessage();
-        temp->updateChatFromFiles(std::move(last));
+        //Открытие файла с чатами пользователя
         ofstream userChatsFile("user_chats_" + std::to_string(this->userID_) + ".txt", ios::app);
+        //Запись ID чата и его последнего изменения
         userChatsFile.write((char*)&chatID, sizeof(chatID));
+        userChatsFile.write((char*)&lastUpdate, sizeof(lastUpdate));
         userChatsFile.close();
         return true;
     }
