@@ -10,6 +10,7 @@ CONFIG += c++17
 
 SOURCES += \
     chat.cpp \
+    contactwidget.cpp \
     main.cpp \
     autorization.cpp \
     messenger.cpp \
@@ -29,6 +30,7 @@ HEADERS += \
     autorization.h \
     chat.h \
     chatExcept.h \
+    contactwidget.h \
     message.h \
     messenger.h \
     newpassword.h \

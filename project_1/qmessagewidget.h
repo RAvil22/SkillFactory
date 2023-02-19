@@ -1,5 +1,4 @@
-#ifndef QMESSAGEWIDGET_H
-#define QMESSAGEWIDGET_H
+#pragma once
 
 #include <QWidget>
 #include <QLabel>
@@ -20,7 +19,6 @@ private:
     QLabel *senderName_;
     QLabel *time_;
     QLabel *text_;
-    QVBoxLayout *layout;
+    QVBoxLayout *layout_;
 };
 
-#endif // QMESSAGEWIDGET_H

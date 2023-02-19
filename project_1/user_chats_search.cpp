@@ -36,6 +36,12 @@ list<shared_ptr<Chat>>::iterator User::searchUserChat(const unsigned int chatID)
     return iter;
 }
 
+unsigned int User::getUnreadMessages(const unsigned int chatID){
+    auto currChat = searchUserChat(chatID);
+    if(*currChat){return (*currChat)->getUnreadMessages();}
+    else return 0;
+}
+
 unsigned int User::searchChatID(const unsigned int chatID){ //??????? ID ????
     auto iter{ searchUserChat(chatID) };
     if (iter != this->userChats_.end()) return  (*iter)->getChatID();

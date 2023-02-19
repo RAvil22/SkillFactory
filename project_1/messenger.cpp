@@ -3,6 +3,8 @@
 #include <iostream>
 #include "user.h"
 
+#include <typeinfo>
+
 Messenger::Messenger(unique_ptr<User> curr, QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::Messenger)
@@ -26,20 +28,24 @@ Messenger::Messenger(unique_ptr<User> curr, QWidget *parent)
     /*Создать кнопки выбора чата*/
     auto numChats{current->getNumberOfChats()};
     for(unsigned int i{0}; i < numChats; ++i){
-        QPushButton *contact = new QPushButton();
+        auto chat = (*current->searchUserChat(current->getChatID(i)));
         switch(current->getChatType(i)){
             case 1:{
-                QString temp{"Chat " + QString::number(current->getChatID(i))};
-                auto name = current->getChatName(i);
-                if(current->getChatName(i).size()){
-                    temp += " ";
-                    temp += QString::fromStdString(current->getChatName(i));
-                }
-                contact->setText(temp);
+                QContactWidget *contact = new QContactWidget(current->getChatID(i), current->getChatType(i),
+                                                            QString::fromStdString(current->getChatName(i)));
+                QObject::connect(contact, SIGNAL(chatCalled()), this, SLOT(getChat()));
+                ui->scrollArea_Contacts->widget()->layout()->addWidget(contact);
                 break;
             }
             case 2:{
-                contact->setText("Contact " + QString::number(current->getChatID(i)));
+                auto temp = dynamic_pointer_cast<PrivateChat>(chat);
+                unsigned int calledID;
+                if(temp->getFirstUserID() == current->getUserID()){calledID = temp->getSecondUserID();}
+                else {calledID = temp->getFirstUserID();}
+                QContactWidget *contact = new QContactWidget(current->getChatID(i), current->getChatType(i),
+                                                            QString::fromStdString(to_string(calledID)));
+                QObject::connect(contact, SIGNAL(chatCalled()), this, SLOT(getChat()));
+                ui->scrollArea_Contacts->widget()->layout()->addWidget(contact);
                 break;
             }
             default:{
@@ -47,9 +53,12 @@ Messenger::Messenger(unique_ptr<User> curr, QWidget *parent)
                 break;
             }
         }
-        QObject::connect(contact, &QPushButton::clicked, this, &Messenger::getChat);
-        ui->contactsLayout->addWidget(contact);
+
     }
+
+    timer_ = new QTimer(this);
+    connect(timer_, SIGNAL(timeout()), this, SLOT(on_timeout()));
+    timer_->start(1000);
 }
 
 bool Messenger::checkForAllDigits(QString& fromDialog){
@@ -61,23 +70,33 @@ bool Messenger::checkForAllDigits(QString& fromDialog){
 }
 
 void Messenger::getChat(){
-    QPushButton *button = (QPushButton*)sender();
-    QString btnStr{button->text()};
-    //Извлечение из строки номера чата
-    auto start{btnStr.indexOf(L' ')};
-    auto finish{btnStr.indexOf(L' ',start+1)};
-    QString chatID;
-    if(finish < 0){
-        chatID = btnStr.sliced(start+1);
-    }
-    else{
-        for(auto i{start+1}; i < finish; ++i){
-            chatID += btnStr[i];
-        }
-    }
-    ui->Label_ActiveChatID->setText((chatID));//в надпись должен идти немер чата
+    timer_->stop();
+    QContactWidget *contact = (QContactWidget*)sender();
+    QString chatID = QString::fromStdString(to_string(contact->getChatID()));
+    ui->Label_ActiveChatID->setText(chatID);//в надпись должен идти номер чата
     ui->pushButton_SendMes->setEnabled(true);
     loadUserChat(ui->Label_ActiveChatID->text().toUInt());
+    fstream userChatsFile{"user_chats_" + to_string(current->getUserID()) + ".txt"};
+    if(userChatsFile.is_open()){
+        unsigned int currChatID;
+        while(userChatsFile.read((char*)&currChatID,sizeof(currChatID))){
+            if(currChatID != contact->getChatID()){userChatsFile.seekg(sizeof(time_t), ios::cur);}
+            else{
+                auto currChat = current->searchUserChat(contact->getChatID());
+                time_t lastUp = (*currChat)->getChatLastUpdate();
+                userChatsFile.write((char*)&lastUp, sizeof(lastUp));
+                (*currChat)->zeroUnreadMessages();
+                break;
+            }
+        }
+        userChatsFile.close();
+    }
+    else{
+        QMessageBox::warning(this, "Внимание!", "Отсутствует файл чатов пользователя!");
+        close();
+    }
+    //contact->zeroUnread();
+    timer_->start(1000);
 }
 
 Messenger::~Messenger()
@@ -91,7 +110,7 @@ void Messenger::sendMessage(){
     current->sendMessageToChat(std::move(mess), ui->Label_ActiveChatID->text().toUInt());
     QMessageWidget *temp = new QMessageWidget(ui->scrollArea_Chat->widget(), this->current->getUserID(),
                                               QString::fromStdString(current->getUserName()), std::time(nullptr), ui->textEdit->toPlainText());
-    ui->chatLayout->addWidget(temp);
+    ui->scrollArea_Chat->widget()->layout()->addWidget(temp);
     ui->textEdit->clear();
 }
 
@@ -163,7 +182,7 @@ void Messenger::createPublicChat(void){
     QPushButton *newContact = new QPushButton();
     newContact->setText("Chat " + QString::fromStdString(std::to_string(current->getChatID(lastChatNum))) + " " + result);
     QObject::connect(newContact, &QPushButton::clicked, this, &Messenger::getChat);
-    ui->contactsLayout->addWidget(newContact);
+    ui->scrollArea_Contacts->widget()->layout()->addWidget(newContact);
 }
 
 void Messenger::createPrivateChat(void){
@@ -206,7 +225,7 @@ void Messenger::createPrivateChat(void){
     QPushButton *newContact = new QPushButton();
     newContact->setText("Contact " + QString::fromStdString(std::to_string(current->getChatID(lastChatNum))) + " " + result);
     QObject::connect(newContact, &QPushButton::clicked, this, &Messenger::getChat);
-    ui->contactsLayout->addWidget(newContact);
+    ui->scrollArea_Contacts->widget()->layout()->addWidget(newContact);
 }
 
 unsigned int Messenger::searchUser(void){
@@ -249,7 +268,7 @@ unsigned int Messenger::searchChat(void){ //Задействовать клас�
     else return 0;
 }
 
-void Messenger::leaveChat(void){
+void Messenger::leaveChat(void){ //Доделать
     SingleDialog sCh("Leave chat", this);
     QString chatID;
     sCh.setModal(true);
@@ -266,27 +285,33 @@ void Messenger::leaveChat(void){
 }
 
 void Messenger::joinChat(void){
-    SingleDialog sCh("Join to chat", this);
-    QString chatID;
-    sCh.setModal(true);
-    connect(&sCh, &SingleDialog::lineText, [&](QString text)
-    {chatID = text;});
-    sCh.exec();
-    if(!checkForAllDigits(chatID)){
-        QMessageBox::warning(this, "Внимание!", "Номер чата состоит из чисел!");
-        return;
+    try {
+        SingleDialog sCh("Join to chat", this);
+        QString chatID;
+        sCh.setModal(true);
+        connect(&sCh, &SingleDialog::lineText, [&](QString text)
+        {chatID = text;});
+        sCh.exec();
+        if(!checkForAllDigits(chatID)){
+            QMessageBox::warning(this, "Внимание!", "Номер чата состоит из чисел!");
+            return;
+        }
+        if(current->joinToChat(chatID.toUInt())){
+            //Получение позиции нового чата в списке чатов
+            auto numChats{current->getNumberOfChats()};
+            auto lastChatNum = numChats-1;
+            //Создание и размещение в окне кнопки вызова чата
+            QPushButton *newContact = new QPushButton();
+            newContact->setText("Chat " + QString::fromStdString(std::to_string(current->getChatID(lastChatNum))) + " " +
+                                QString::fromStdString(current->getChatName(lastChatNum)));
+            QObject::connect(newContact, &QPushButton::clicked, this, &Messenger::getChat);
+            ui->scrollArea_Contacts->widget()->layout()->addWidget(newContact);
+        }
     }
-    if(current->joinToChat(chatID.toUInt())){
-        //Получение позиции нового чата в списке чатов
-        auto numChats{current->getNumberOfChats()};
-        auto lastChatNum = numChats-1;
-        //Создание и размещение в окне кнопки вызова чата
-        QPushButton *newContact = new QPushButton();
-        newContact->setText("Chat " + QString::fromStdString(std::to_string(current->getChatID(lastChatNum))) + " " +
-                            QString::fromStdString(current->getChatName(lastChatNum)));
-        QObject::connect(newContact, &QPushButton::clicked, this, &Messenger::getChat);
-        ui->contactsLayout->addWidget(newContact);
+    catch (exception &ex) {
+    QMessageBox::warning(this, "Внимание!", ex.what());
     }
+
 }
 
 void Messenger::quitFromMessenger(void){
@@ -309,54 +334,80 @@ void Messenger::refreshPassword(void){
 
 bool Messenger::loadUserChat(unsigned int chatID){
     //Очистить окно чата
-    while(!ui->chatLayout->isEmpty()){
-        QLayoutItem* item = ui->chatLayout->itemAt(0);
-        ui->chatLayout->removeItem(item);
+    while(!ui->scrollArea_Chat->widget()->layout()->isEmpty()){
+        QLayoutItem* item = ui->scrollArea_Chat->widget()->layout()->itemAt(0);
+        ui->scrollArea_Chat->widget()->layout()->removeItem(item);
         QWidget* widget = item->widget();
         if(widget) delete widget;
     }
 
     list<shared_ptr<Message>> chatMessages;
-    if(current->uploadChatMessages(chatID, chatMessages)){
-        auto iter{chatMessages.begin()};
-        auto endChat{chatMessages.end()};
-        while(iter != endChat){
-            auto curID{(*iter)->getMessageSender()};
-            /**/
-            QString curName{""};
-            ifstream userName{"user_" + std::to_string(curID) + ".txt"};
-            if(userName.is_open()){
-                unsigned int id{0};
-                unsigned int passSize{0};
-                unsigned int nameSize{0};
-                string name{""};
-                char c;
-                userName.read((char*)&id, sizeof(id));
-                userName.read((char*)&passSize, sizeof(passSize));
-                userName.seekg(passSize,ios::cur);
-                userName.read((char*)&nameSize, sizeof(nameSize));
-                for(unsigned int i{0}; i < nameSize; ++i){
-                    userName.read((char*)&c, sizeof(c));
-                    curName += c;
+    try {
+        if(current->uploadChatMessages(chatID, chatMessages)){
+            auto iter{chatMessages.begin()};
+            auto endChat{chatMessages.end()};
+            while(iter != endChat){
+                auto curID{(*iter)->getMessageSender()};
+                /**/
+                QString curName{""};
+                ifstream userName{"user_" + std::to_string(curID) + ".txt"};
+                if(userName.is_open()){
+                    unsigned int id{0};
+                    unsigned int passSize{0};
+                    unsigned int nameSize{0};
+                    string name{""};
+                    char c;
+                    userName.read((char*)&id, sizeof(id));
+                    userName.read((char*)&passSize, sizeof(passSize));
+                    userName.seekg(passSize,ios::cur);
+                    userName.read((char*)&nameSize, sizeof(nameSize));
+                    for(unsigned int i{0}; i < nameSize; ++i){
+                        userName.read((char*)&c, sizeof(c));
+                        curName += c;
+                    }
+                    userName.close();
                 }
-                userName.close();
+                /**/
+                auto curTime{(*iter)->getMessageSendTime()};
+                QString curText{(*iter)->getText().c_str()};
+                QMessageWidget *temp = new QMessageWidget(ui->scrollArea_Chat->widget(), curID, curName, curTime, curText);
+                ui->scrollArea_Chat->widget()->layout()->addWidget(temp);
+                ++iter;
             }
-            /**/
-            auto curTime{(*iter)->getMessageSendTime()};
-            QString curText{(*iter)->getText().c_str()};
-            QMessageWidget *temp = new QMessageWidget(ui->scrollArea_Chat->widget(), curID, curName, curTime, curText);
-            ui->chatLayout->addWidget(temp);
-            ++iter;
         }
     }
+    catch (exception &ex) {
+        QMessageBox::warning(this, "Внимание!", ex.what());
+    }
+
+    return true;
+}
+
+void Messenger::on_timeout(void){
+    if(updateUserChatsStatus());
+    else{
+        QMessageBox::warning(this, "Внимание!", "Невозможно обновить статус чатов!");
+        timer_->stop();
+    }
+
 }
 
 bool Messenger::updateUserChatsStatus(void){
-    //Пройти по всем чатам пользователя, вызвать для каждого uploadChatMessages,
-    //вызвать getUnreadMessages, полученные значения занести в кнопки
-    //Возможно, на основе кнопок создать собственный виджет с кнопкой вызова чата,
-    //надписью с номером чата и скрытым для пользователя ID чата
-
+    auto numOfWids{ui->scrollArea_Contacts->widget()->layout()->count()};
+    for(int i{0}; i < numOfWids; ++i){
+        QContactWidget *currWidget = qobject_cast<QContactWidget*>(ui->verticalLayout->itemAt(i)->widget());
+        if(currWidget){
+            unsigned int currChatID{currWidget->getChatID()};
+            auto currChat{current->searchUserChat(currChatID)};
+            try {
+                if(!current->updateChat(currChat))return false;
+            } catch (exception &ex) {
+                QMessageBox::warning(this, "Внимание!", ex.what());
+            }
+            currWidget->updateUnreadMessages(current->getUnreadMessages(currChatID));
+        }
+    }
+    return true;
 }
 
 

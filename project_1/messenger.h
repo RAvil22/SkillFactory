@@ -1,6 +1,8 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QTimer>
+#include "contactwidget.h"
 #include "qmessagewidget.h"
 #include "singledialog.h"
 #include "newpassword.h"
@@ -34,6 +36,8 @@ private slots:
     void changeUserSets(void);
     void refreshPassword(void);
 
+    void on_timeout(void);
+
 private:
     Ui::Messenger *ui;
     unique_ptr<User> current;
@@ -44,7 +48,6 @@ private:
     bool updateUserChatsStatus(void);
     bool clearMessagesWindow(void);
     bool checkForAllDigits(QString& fromDialog);
-
 
     QMenu *mainMenu;
     QMenu *setsMenu;
@@ -58,5 +61,7 @@ private:
     QAction *quitFromMessengerAct;
     QAction *changeUserSetsAct;
     QAction *refreshPasswordAct;
+
+    QTimer *timer_;
 };
 

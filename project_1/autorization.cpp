@@ -45,10 +45,18 @@ void Autorization::btnSignInClicked(void){
             QMessageBox::warning(this, "Внимание!", "Такого сочетания нет!");
             return;
         }
-        unique_ptr<User> currentUser = make_unique<User>(userID, userPassword);
-        this->chatter = make_unique<Messenger>(std::move(currentUser));
-        this->chatter->show();
-        this->hide();
+        try{
+            unique_ptr<User> currentUser = make_unique<User>(userID, userPassword);
+            this->chatter = make_unique<Messenger>(std::move(currentUser));
+            this->chatter->show();
+            this->hide();
+        }
+        catch(exception &ex){
+            QMessageBox::warning(this, "Внимание!", ex.what());
+            this->close();
+        }
+
+
     }
     else {
         QMessageBox::warning(this, "Внимание!", "Файл пользователя отсуствует!");

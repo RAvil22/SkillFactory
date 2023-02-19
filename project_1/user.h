@@ -36,6 +36,7 @@ public:
     unsigned int getChatID(const unsigned int);
     string getChatName(const unsigned int);
     unsigned int getChatType(const unsigned int);
+    unsigned int getUnreadMessages(const unsigned int chatID);
     list<shared_ptr<Chat>>::iterator searchUserChat(const unsigned int); //ok
     unsigned int searchChatID(const unsigned int); //Возврат ID чата
     list<unsigned int> searchChatName(const string); //Возврат ID подходящих чатов

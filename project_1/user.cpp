@@ -101,8 +101,8 @@ void User::fillProfileChatsFromFile(){
 
         while(userChatsFile.read((char*)&chatID,sizeof(chatID))){
             //Либо читать, либо пропускать, одно из двух
-            //userChatsFile.read((char*)&lastUserChatUpdate, sizeof(lastUserChatUpdate));
-            userChatsFile.seekg(sizeof(time_t),ios::cur);
+            userChatsFile.read((char*)&lastUserChatUpdate, sizeof(lastUserChatUpdate));
+            //userChatsFile.seekg(sizeof(time_t),ios::cur);
             //??????? ???? ???? ? ?????? ("Chat_" + to_string(chatID_) + ".txt")
             string fileName_ = "Chat_" + to_string(chatID) + ".txt";
             ifstream chatFile(fileName_);
@@ -116,7 +116,7 @@ void User::fillProfileChatsFromFile(){
                 case 0:
                     break;
 
-                case 1://????? ???
+                case 1:
                     {
                         //PublicChat(const unsigned int chatID, const unsigned int chatOwnerID)
                         chatFile.open(fileName_);
@@ -124,17 +124,20 @@ void User::fillProfileChatsFromFile(){
                         unsigned int chatOwner;
                         chatFile.read((char*)&chatOwner, sizeof(chatOwner));
                         chatFile.close();
-                        //?????? ???????? ?? ??????? ? ????? ????????????? ???? ???????? ????????????
-
 
                         shared_ptr<PublicChat> temp = make_shared<PublicChat>(chatID, chatOwner);
+                        auto currChatSize{temp->size()};
+                        for(unsigned int i{0}; i < currChatSize; ++i){
+                            if(temp->getMessageSendTime(i) > lastUserChatUpdate){temp->incUnreadMessages();}
+                        }
                         this->userChats_.push_back(std::move(temp));
+
+
                         break;
                     }
 
-                case 2://?????? ???
+                case 2:
                     {
-                       //PrivateChat(unsigned int chatID, unsigned int firstUserID, unsigned int secondUserID)
                         chatFile.open(fileName_);
                         chatFile.seekg(sizeof(unsigned int), ios::beg);
                         unsigned int firstID;
@@ -144,6 +147,10 @@ void User::fillProfileChatsFromFile(){
                         chatFile.close();
                         if(firstID == this->userID_ || secondID == this->userID_){
                             shared_ptr<PrivateChat> temp = make_shared<PrivateChat>(chatID, firstID, secondID);
+                            auto currChatSize{temp->size()};
+                            for(unsigned int i{0}; i < currChatSize; ++i){
+                                if(temp->getMessageSendTime(i) > lastUserChatUpdate){temp->incUnreadMessages();}
+                            }
                             this->userChats_.push_back(std::move(temp));
                         }
                         break;
@@ -157,11 +164,11 @@ void User::fillProfileChatsFromFile(){
                 }//switch(chatType)
                 chatFile.close();
             }//if(chatFile.is_open())
-            else{throw NoOpen(fileName_);}//??????? ??????????
+            else{throw NoOpen(fileName_);}
         }//while(userChatsFile.read((char*)&chatID,sizeof(chatID)))
         userChatsFile.close();
     }//if(userChatsFile.is_open())
-    else{throw NoOpen(userChatsFileName);}//??????? ??????????
+    else{throw NoOpen(userChatsFileName);}
 }
 
 void User::createProfileFiles(){

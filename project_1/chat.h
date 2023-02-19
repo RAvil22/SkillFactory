@@ -16,6 +16,9 @@ public:
     virtual bool addMessage(shared_ptr<Message>) = 0;
     string getMessageText(unsigned int);
     unsigned int getMessageSender(unsigned int);
+    unsigned int getUnreadMessages(){return this->unreadMessages_;}
+    void zeroUnreadMessages(){this->unreadMessages_ = 0;}
+    void incUnreadMessages(){this->unreadMessages_ += 1;}
     time_t getMessageSendTime(unsigned int);
     unsigned int getChatType(){return chatType_;}
     virtual bool removeMessage(unsigned int num, unsigned int userID) = 0;

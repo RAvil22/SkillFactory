@@ -13,11 +13,10 @@ QMessageWidget::QMessageWidget(QWidget *parent, unsigned int senderID, QString s
     text_->setText(text);
     text_->setWordWrap(true);
 
-    layout = new QVBoxLayout(this);
-    layout->addWidget(senderName_);
-    layout->addWidget(senderID_);
-    layout->addWidget(time_);
-    layout->addWidget(text_);
-
-    //this->setStyleSheet("background-color:red"); //Меняет все
+    layout_ = new QVBoxLayout(this);
+    layout_->addWidget(senderName_);
+    layout_->addWidget(senderID_);
+    layout_->addWidget(time_);
+    layout_->addWidget(text_);
+    this->setLayout(layout_);
 }
